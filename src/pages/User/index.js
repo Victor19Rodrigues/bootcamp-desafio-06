@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import {ActivityIndicator} from 'react-native';
+import {ActivityIndicator, View} from 'react-native';
 import PropTypes from 'prop-types';
 
 import api from '../../services/api';
@@ -16,6 +16,7 @@ import {
   Infos,
   Title,
   Author,
+  Loading,
 } from './styles';
 
 export default class User extends Component {
@@ -31,24 +32,62 @@ export default class User extends Component {
 
   state = {
     stars: [],
-    loading: false,
+    loading: true,
+    page: 1,
+    refreshing: false,
+    isEmpty: false,
   };
 
   async componentDidMount() {
+    this.load();
+  }
+
+  load = async (page = 1) => {
+    const {stars} = this.state;
     const {navigation} = this.props;
     const user = navigation.getParam('user');
 
-    this.setState({
-      loading: true,
+    const response = await api.get(`/users/${user.login}/starred`, {
+      params: {page},
     });
 
-    const response = await api.get(`/users/${user.login}/starred`);
-
     this.setState({
-      stars: response.data,
+      stars: page >= 2 ? [...stars, ...response.data] : response.data,
+      page,
       loading: false,
+      refreshing: false,
+      isEmpty: response.data.length === 0 ? true : false,
     });
-  }
+  };
+
+  loadMore = () => {
+    const {page} = this.state;
+    const nextPage = page + 1;
+
+    this.load(nextPage);
+  };
+
+  refreshList = () => {
+    this.setState({refreshing: true, stars: []}, this.load);
+  };
+
+  renderFooter = () => {
+    const {loading, isEmpty} = this.state;
+
+    if (loading) {
+      return null;
+    }
+
+    if (!isEmpty) {
+      return (
+        <View>
+          <Loading />
+        </View>
+      );
+    }
+
+    return null;
+  };
 
   render() {
     const {navigation} = this.props;
@@ -65,9 +104,11 @@ export default class User extends Component {
         </Header>
 
         {loading ? (
-          <ActivityIndicator size="large" color="#7159c1" />
+          <Loading />
         ) : (
           <Stars
+            onEndReachedThreshold={0.2}
+            onEndReached={this.loadMore}
             data={stars}
             keyExtractor={star => String(star.id)}
             renderItem={({item}) => (
@@ -79,6 +120,7 @@ export default class User extends Component {
                 </Infos>
               </Starred>
             )}
+            ListFooterComponent={this.renderFooter}
           />
         )}
       </Container>
