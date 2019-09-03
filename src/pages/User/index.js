@@ -89,6 +89,12 @@ export default class User extends Component {
     return null;
   };
 
+  handleNavigate = repository => {
+    const {navigation} = this.props;
+
+    navigation.navigate('Repository', {repository});
+  };
+
   render() {
     const {navigation} = this.props;
     const {stars, loading} = this.state;
@@ -115,7 +121,9 @@ export default class User extends Component {
               <Starred>
                 <OwnerAvatar source={{uri: item.owner.avatar_url}} />
                 <Infos>
-                  <Title>{item.name}</Title>
+                  <Title onPress={() => this.handleNavigate(item)}>
+                    {item.name}
+                  </Title>
                   <Author>{item.owner.login}</Author>
                 </Infos>
               </Starred>
